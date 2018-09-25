@@ -1,0 +1,56 @@
+<!--logs.wxml-->
+<view class="container">
+
+  <view class="top-view">
+    <image mode="widthFix" src="../../images/product/top.png"/>
+
+    <view wx:if="{{!connectNow}}" class="bluetooth">
+      <image mode="widthFix" src="../../images/bluetooth.png"/>
+    </view>
+    <view wx:if="{{connectNow}}" class="bluetooth-active">
+      <image mode="widthFix" src="../../images/bluetooth-active.png"/>
+    </view>
+    <view wx:if="{{!connectNow}}" class="loading">
+      <view class="span"></view>
+      <view class="span"></view>
+      <view class="span"></view>
+      <view class="span"></view>
+      <view class="span"></view>
+    </view>
+    <view wx:if="{{connectNow}}" class="loading-active">
+      <view class="span"></view>
+      <view class="span"></view>
+      <view class="span"></view>
+      <view class="span"></view>
+      <view class="span"></view>
+    </view>
+    <view wx:if="{{connectNow}}" class="point-active">
+      <image mode="widthFix" src="../../images/point-active.png"/>
+    </view>
+  </view>
+  <view class="notice-text">
+    打开手机蓝牙，确定DOCO设备在附近。
+  </view>
+  <view bindtap="searchBluetooth" class="test-button">
+    连接设备
+  </view>
+
+  <view data-value="at+md=10" bindtap="postData">
+    post data 10
+  </view>
+
+  <view data-value="at+md=50" bindtap="postData">
+    post data 50
+  </view>
+
+  <view data-value="at+md=99" bindtap="postData">
+    post data 99
+  </view>
+
+  <view>
+    devicelist:
+    <button data-deviceId="{{item.deviceId}}"  bindtap="connectDevice" wx:for="{{devicesList}}" wx:key="{{item.deviceId}}" type="default" hover-class="other-button-hover"> 
+      {{item.name}}
+    </button>
+  </view>
+</view>
