@@ -1,5 +1,14 @@
 //logs.js
 //const util = require('../../utils/util.js')
+function ab2hex(buffer) {
+  var hexArr = Array.prototype.map.call(
+    new Uint8Array(buffer),
+    function (bit) {
+      return ('00' + bit.toString(16)).slice(-2)
+    }
+  )
+  return hexArr.join('');
+}
 
 Page({
   data: {
@@ -22,15 +31,20 @@ Page({
             }
           })
     }
+    let buffer = new ArrayBuffer(16)
+    let dataView = new DataView(buffer)
+    var aaaaa = "at+md=10";
+    for (let i = 0; i< aaaaa.length; i++) {
 
-    let command = "at+md=10";
-    var buf = new ArrayBuffer(command.length); // 1 bytes for each char
-    var bufView = new Uint8Array(buf);
-    for (var i = 0, strLen = command.length; i < strLen; i++) {
-      bufView[i] = command.charCodeAt(i);
+      var a = parseInt(aaaaa.charCodeAt(i),16);
+      console.log(a)
+      dataView.setUint16(0, a)
+     
     }
-    console.log(bufView)
 
+    var b = ab2hex(buffer);
+    console.log(b)
+    
 
   },
 
@@ -123,18 +137,20 @@ Page({
   postData:function(e){
 
 
-    let command = "at+md=10";
-    var buf = new ArrayBuffer(command.length*2); // 1 bytes for each char
-    var bufView = new Uint8Array(buf);
-    for (var i = 0, strLen = command.length; i < strLen; i++) {
-      bufView[i] = (command.charCodeAt(i)).toString(16);
+    let buffer = new ArrayBuffer(1)
+    let dataView = new DataView(buffer)
+    var aaaaa = "at+md=10";
+    for (let i = 0; i< aaaaa.length; i++) {
+      var a = (aaaaa.charCodeAt(i)).toString(16);
+      console.log(a)
+      dataView.setUint8(0, a)
     }
 
     wx.writeBLECharacteristicValue({
       deviceId: this.data.blueData[1].deviceId,
       serviceId: this.data.blueData[1].serviceId,
       characteristicId:this.data.blueData[1].characteristicId,
-      value:bufView.buffer,
+      value:buffer,
       success:function(res){
         console.log(res)
       },fail:function(res){
