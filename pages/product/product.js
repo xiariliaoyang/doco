@@ -31,16 +31,22 @@ Page({
             }
           })
     }
-    let buffer = new ArrayBuffer(16)
-    let dataView = new DataView(buffer)
-    var aaaaa = "at+md=10";
-    for (let i = 0; i< aaaaa.length; i++) {
-
-      var a = parseInt(aaaaa.charCodeAt(i),16);
-      console.log(a)
-      dataView.setUint16(0, a)
-     
+    var text = "at+md=10";
+    var str = [];
+    for (let i = 0; i < text.length; i++) {
+      str.push(text[i].toString(16))
     }
+    console.log(str)
+    let buffer = new ArrayBuffer(text.length)
+    let dataView = new DataView(buffer)
+
+    for (let i = 0; i < str.length; i++) {
+      
+      dataView.setUint8(i, str[i])
+    }
+    console.log(dataView)
+    /* dataView.setUint8(15, a)
+    console.log(a,a.toString(16)) */
 
     var b = ab2hex(buffer);
     console.log(b)
