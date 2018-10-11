@@ -100,7 +100,7 @@ Page({
     },
 
     createBLEConnection:function(e) {
-        console.log(e)
+        
         const ds = e.currentTarget.dataset
         const deviceId = ds.deviceId
         const name = ds.name

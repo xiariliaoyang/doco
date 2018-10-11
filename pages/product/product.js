@@ -1,195 +1,308 @@
-//logs.js
-//const util = require('../../utils/util.js')
-function ab2hex(buffer) {
-  var hexArr = Array.prototype.map.call(
-    new Uint8Array(buffer),
-    function (bit) {
-      return ('00' + bit.toString(16)).slice(-2)
+const app = getApp()
+
+function inArray(arr, key, val) {
+    for (let i = 0; i < arr.length; i++) {
+        if (arr[i][key] === val) {
+            return i;
+        }
     }
-  )
-  return hexArr.join('');
+    return -1;
+}
+
+// ArrayBuffer转16进度字符串示例
+function ab2hex(buffer) {
+    var hexArr = Array.prototype.map.call(
+        new Uint8Array(buffer),
+        function (bit) {
+            return ('00' + bit.toString(16)).slice(-2)
+        }
+    )
+    return hexArr.join('');
 }
 
 Page({
-  data: {
-    devicesList: [],
-    bluetoothStatus: false,
-    connectNow: false,
-    blueData: []
-  },
-  onLoad: function () {
-    var that = this
-    if (this.bluetoothStatus) {
-      console.log("open")
-    } else {
-      console.log("close")
-      wx.openBluetoothAdapter({
-        success: function (res) {
-          that.setData({
-            bluetoothStatus: true
-          })
-        }
-      })
-    }
-    /*var text = "at+md=10";
-    var str = [];
-    for (let i = 0; i < text.length; i++) {
-      str.push(text.charCodeAt(i))
-    }
-    console.log(str)
-    let buffer = new ArrayBuffer(text.length)
-    let dataView = new DataView(buffer)
+    data: {
+        devices: [],
+        connected: false,
+        chs: [],
+        currDeviceId: '',
+        name:''
+    },
+    onLoad: function () {
 
-    for (let i = 0; i < str.length; i++) {      
-      dataView.setUint8(i, str[i])
-    }*/
+    },
 
-    var sendData = "at+md=10";
-    let buffer = new ArrayBuffer(sendData.length);
-    let dataView = new DataView(buffer);
-    for (let i = 0; i < sendData.length; i++) {
-      console.log(sendData.charAt(i).charCodeAt())
-      dataView.setUint8(i, sendData.charAt(i).charCodeAt())
-    }
-
-    var b = ab2hex(buffer);
-    console.log(b)
-
-  },
-
-  searchBluetooth: function () {
-    var that = this
-    wx.startBluetoothDevicesDiscovery({
-      success: function (res) {
-        wx.getBluetoothDevices({
-          success: function (data) {
-            var devices = data.devices;
-            var devicesArray = [];
-            for (let i = 0; i < devices.length; i++) {
-              if (devices[i].name.indexOf("DOCO") >= 0) {
-                devicesArray.push(devices[i])
-              }
+    openBluetoothAdapter:function() {
+        wx.openBluetoothAdapter({
+            success: (res) => {
+                console.log('openBluetoothAdapter success', res)
+                this.startBluetoothDevicesDiscovery()
+            },
+            fail: (res) => {
+                if (res.errCode === 10001) {
+                    wx.onBluetoothAdapterStateChange(function (res) {
+                        console.log('onBluetoothAdapterStateChange', res)
+                        if (res.available) {
+                            this.startBluetoothDevicesDiscovery()
+                        }
+                    })
+                }
             }
-            that.setData({
-              devicesList: devicesArray,
-              connectNow: true
-            })
-          }
         })
-      }
-    })
-  },
+
+        var that = this
+        setTimeout(function(e){
+            
+            console.log(that.data.devices)
+            wx.stopBluetoothDevicesDiscovery()
+            wx.hideLoading()
+            console.log("停止扫描")
+            
+            var itemList = []
+            that.data.devices.forEach(element => {
+                itemList.push(element.name)
+            });
+
+            wx.showActionSheet({
+                itemList: itemList,
+                itemColor: '#007aff',
+                success(res) {
+
+                    for (let i = 0; i < that.data.devices.length; i++) {
+                        if (res.tapIndex === i) {
+                            console.log(that.data.devices[i].name,that.data.devices[i].deviceId)
+                            that.createBLEConnection(that.data.devices[i].name,that.data.devices[i].deviceId)
+                        }
+                    }
 
 
-  connectDevice: function (e) {
-    var that = this;
-    var deviceId = e.currentTarget.dataset.deviceid;
-    wx.createBLEConnection({
-      deviceId: deviceId,
-      success: function (res) {
-        //获取服务项目
-        console.log("获取的deviceid" + deviceId)
+                    //createBLEConnection(name,deviceId)
+                }
+              })
+        },3000)
+    },
+    getBluetoothAdapterState:function() {
+        wx.getBluetoothAdapterState({
+            success: (res) => {
+                console.log('getBluetoothAdapterState', res)
+                if (res.discovering) {
+                    this.onBluetoothDeviceFound()
+                } else if (res.available) {
+                    this.startBluetoothDevicesDiscovery()
+                }
+            }
+        })
+    },
+
+    startBluetoothDevicesDiscovery:function() {
+
+        wx.showLoading({
+            title:'查找设备中',
+            mask:true
+        })
+
+        if (this._discoveryStarted) {
+            return
+        }
+        this._discoveryStarted = true
+        wx.startBluetoothDevicesDiscovery({
+            allowDuplicatesKey: true,
+            success: (res) => {
+                console.log('startBluetoothDevicesDiscovery success', res)
+                this.onBluetoothDeviceFound()
+            },
+        })
+    },
+
+    stopBluetoothDevicesDiscovery:function() {
+        wx.stopBluetoothDevicesDiscovery()
+        console.log("停止扫描")
+    },
+
+    onBluetoothDeviceFound:function() {
+        wx.onBluetoothDeviceFound((res) => {
+
+            if (res.devices[0].name.indexOf("DOCO") >= 0) {
+                const idx = inArray(this.data.devices, 'deviceId', res.devices[0].deviceId)
+                if (idx === -1) {
+                    if (this.data.devices.length === 0) {
+                        var a = []
+                        a.push(res.devices[0])
+                        this.setData({
+                            devices:a
+                        })
+                    } else {
+                        const idx = inArray(this.data.devices, 'deviceId', res.devices[0].deviceId)
+                        if (idx === -1) {
+                            this.setData({
+                                devices:this.data.devices.push(res.devices[0])
+                            })
+                        }
+                    }
+
+                }
+
+            }
+
+        })        
+
+    },
+
+    createBLEConnection:function(name,deviceId){
+        var that = this
+        wx.createBLEConnection({
+            deviceId,
+            success: (res) => {
+                that.setData({
+                    connected: true,
+                    name:name,
+                    currDeviceId:deviceId,
+                })
+                console.log("这是that")
+                console.log(that)
+                var defaultCode = "at+md=50";
+                that.getBLEDeviceServices(deviceId,defaultCode)
+            }
+        })
+        that.stopBluetoothDevicesDiscovery()
+    },
+    btnCreateBLEConnection:function(e) {
+        
+        const ds = e.currentTarget.dataset
+        const deviceId = ds.deviceId
+        const name = ds.name
+
+        wx.createBLEConnection({
+            deviceId,
+            success: (res) => {
+                this.setData({
+                    connected: true,
+                    name,
+                    deviceId,
+                })
+                this.getBLEDeviceServices(deviceId,ds.value)
+            }
+        })
+        //this.stopBluetoothDevicesDiscovery()
+    },
+
+    closeBLEConnection:function() {
+        wx.closeBLEConnection({
+            deviceId: this.data.deviceId
+        })
+        this.setData({
+            connected: false,
+            chs: [],
+            canWrite: false,
+        })
+    },
+
+    getBLEDeviceServices:function(deviceId,value) {
+        console.log(value)
+
         wx.getBLEDeviceServices({
-          deviceId: deviceId,
-          success: function (res) {
-            wx.showToast("链接成功！");
-            for (let i = 0; i < res.services.length; i++) {
-              that.getService(deviceId, res.services[i].uuid)
+            deviceId,
+            success: (res) => {
+                for (let i = 0; i < res.services.length; i++) {
+                    if (res.services[i].isPrimary) {
+                        this.getBLEDeviceCharacteristics(deviceId, res.services[i].uuid,value)
+                        return
+                    }
+                }
             }
-          }
         })
-      }
-    })
+    },
 
-  },
-
-  getService: function (deviceId, serviceId) {
-    var that = this;
-    wx.getBLEDeviceCharacteristics({
-      deviceId: deviceId,
-      serviceId: serviceId,
-      success: function (res) {
-        console.log(res)
-        for (let i = 0; i < res.characteristics.length; i++) {
-          if (res.characteristics[i].properties.write) {
-            console.log(res.deviceId, res.serviceId, res.characteristics[i].uuid)
-            var a = {
-              deviceId: res.deviceId,
-              serviceId: res.serviceId,
-              characteristicId: res.characteristics[i].uuid
+    getBLEDeviceCharacteristics:function(deviceId, serviceId,value) {
+        wx.getBLEDeviceCharacteristics({
+            deviceId,
+            serviceId,
+            success: (res) => {
+                console.log('getBLEDeviceCharacteristics success', res.characteristics)
+                for (let i = 0; i < res.characteristics.length; i++) {
+                    let item = res.characteristics[i]
+                    if (item.properties.read) {
+                        wx.readBLECharacteristicValue({
+                            deviceId,
+                            serviceId,
+                            characteristicId: item.uuid,
+                        })
+                    }
+                    if (item.properties.write) {
+                        this.setData({
+                            canWrite: true
+                        })
+                        this._deviceId = deviceId
+                        this._serviceId = serviceId
+                        this._characteristicId = item.uuid
+                        //默认命令
+                        this.writeBLECharacteristicValue(value)
+                    }
+                    if (item.properties.notify || item.properties.indicate) {
+                        wx.notifyBLECharacteristicValueChange({
+                            deviceId,
+                            serviceId,
+                            characteristicId: item.uuid,
+                            state: true,
+                        })
+                    }
+                }
+            },
+            fail(res) {
+                console.error('getBLEDeviceCharacteristics', res)
             }
-            that.data.blueData.push(a)
+        })
+        // 操作之前先监听，保证第一时间获取数据
+        wx.onBLECharacteristicValueChange((characteristic) => {
+            const idx = inArray(this.data.chs, 'uuid', characteristic.characteristicId)
+            const data = {}
+            if (idx === -1) {
+                data[`chs[${this.data.chs.length}]`] = {
+                    uuid: characteristic.characteristicId,
+                    value: ab2hex(characteristic.value)
+                }
+            } else {
+                data[`chs[${idx}]`] = {
+                    uuid: characteristic.characteristicId,
+                    value: ab2hex(characteristic.value)
+                }
+            }
+            this.setData(data)
+        })
+    },
 
-            setTimeout(function () {
-              that.onOpenNotify(res.deviceId, res.serviceId, res.characteristics[i].uuid)
-            }, 3000)
-          }
+    writeBLECharacteristicValue:function(value) {
 
-          that.post("at+md=10")
+        console.log({
+            "deviceid:": this._deviceId,
+            "serviceId": this._serviceId,
+            "characteristicId": this._characteristicId
+        })
 
+        this.setData({
+            currDeviceId: this._deviceId,
+        })
+
+        var sendData = value;
+        let buffer = new ArrayBuffer(sendData.length);
+        let dataView = new DataView(buffer);
+        for (let i = 0; i < sendData.length; i++) {
+            console.log(sendData.charAt(i).charCodeAt())
+            dataView.setUint8(i, sendData.charAt(i).charCodeAt())
         }
-      }
-    })
-  },
+        wx.writeBLECharacteristicValue({
+            deviceId: this._deviceId,
+            serviceId: this._serviceId,
+            characteristicId: this._characteristicId,
+            value: buffer,
+            success: function (res) {
+                console.log(res)
+            }
+        })
+    },
 
-  onOpenNotify: function (deviceId, serviceId, characteristicId) {
-
-    wx.notifyBLECharacteristicValueChange({
-      state: true,
-      deviceId: deviceId,
-      serviceId: serviceId,
-      characteristicId: characteristicId,
-      success: function (res) {
-        console.log(res)
-      }
-    })
-  },
-
-  postData: function (e) {
-    console.log(e.target.dataset.value)
-    var that = this;
-    var sendData = value;
-    let buffer = new ArrayBuffer(sendData.length);
-    let dataView = new DataView(buffer);
-    for (let i = 0; i < sendData.length; i++) {
-      console.log(sendData.charAt(i).charCodeAt())
-      dataView.setUint8(i, sendData.charAt(i).charCodeAt())
-    }
-    wx.writeBLECharacteristicValue({
-      deviceId: that.data.blueData[1].deviceId,
-      serviceId: that.data.blueData[1].serviceId,
-      characteristicId: that.data.blueData[1].characteristicId,
-      value: buffer,
-      success: function (res) {
-        console.log(res)
-      }
-    })
-
-
-
-  },
-
-
-
-
-  /* postData:function(deviceId,serviceId,characteristicId){
-
-    var a = 'at+md=55';
-    let buffer = new ArrayBuffer(a)
-    let dataView = new DataView(buffer)
-
-    wx.writeBLECharacteristicValue({
-      deviceId: deviceId,
-      serviceId: serviceId,
-      characteristicId:characteristicId,
-      value:buffer,
-      success:function(res){
-        console.log(res)
-      }
-    })
-  } */
-
-
-
-
+    closeBluetoothAdapter:function() {
+        wx.closeBluetoothAdapter()
+        this._discoveryStarted = false
+    },
 })

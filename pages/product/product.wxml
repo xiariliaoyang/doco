@@ -31,26 +31,43 @@
   <view class="notice-text">
     打开手机蓝牙，确定DOCO设备在附近。
   </view>
-  <view bindtap="searchBluetooth" class="test-button">
+  <view bindtap="openBluetoothAdapter" class="test-button">
     连接设备
   </view>
 
-  <view data-value="at+md=10" bindtap="postData">
-    post data 10
-  </view>
 
-  <view data-value="at+md=50" bindtap="postData">
-    post data 50
-  </view>
+  <view class="search-box">
+  <view class="weui-mask"></view>
+  <view>列表</view>
+</view>
 
-  <view data-value="at+md=99" bindtap="postData">
-    post data 99
-  </view>
+  <view class="devices_summary">已发现 {{devices.length}} 个外围设备：</view>
+  <scroll-view class="device_list" scroll-y scroll-with-animation>
+    <view wx:for="{{devices}}" wx:key="index" data-device-id="{{item.deviceId}}" data-name="{{item.name || item.localName}}" bindtap="createBLEConnection" class="device_item" hover-class="device_item_hover">
+      <view style="font-size: 16px; color: #333;">{{item.name}}</view>
+    </view>
+  </scroll-view>
 
+
+  <view class="connected_info" wx:if="{{connected}}">
   <view>
-    devicelist:
-    <button data-deviceId="{{item.deviceId}}"  bindtap="connectDevice" wx:for="{{devicesList}}" wx:key="{{item.deviceId}}" type="default" hover-class="other-button-hover"> 
-      {{item.name}}
-    </button>
+    <text>已连接到 {{name}}</text>
+    <view class="operation">
+
+    <button data-device-id="{{currDeviceId}}" data-value="at+md=10" bindtap="btnCreateBLEConnection">手洗{{currDeviceId}}</button>
+    <button data-device-id="{{currDeviceId}}" data-value="at+md=50" bindtap="btnCreateBLEConnection">中洗{{currDeviceId}}</button>
+    <button data-device-id="{{currDeviceId}}" data-value="at+md=90" bindtap="btnCreateBLEConnection">高洗{{currDeviceId}}</button>
+
+    <button wx:if="{{canWrite}}" size="mini" bindtap="writeBLECharacteristicValue">写数据</button>
+    <button size="mini" bindtap="closeBLEConnection">断开连接</button>
+    </view>
+  </view>
+  <view wx:for="{{chs}}" wx:key="index" style="font-size: 12px; margin-top: 10px;">
+    <view>特性UUID: {{item.uuid}}</view>
+    <view>特性值: {{item.value}}</view>
   </view>
 </view>
+
+</view>
+
+

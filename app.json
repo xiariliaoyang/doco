@@ -2,7 +2,6 @@
   "pages":[
     "pages/product/product",
     "pages/index/index",
-    
     "pages/personal/personal",
     "pages/introduce/introduce"
   ],
